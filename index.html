@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zama Creator Program — Quiz Challenge Day 4</title>
+  <style>
+    :root{
+      --bg: #fff7b2; /* soft yellow */
+      --card: #fffef6;
+      --accent1: #ffb86b; /* orange */
+      --accent2: #ffd6a5; /* peach */
+      --accent3: #9be7ff; /* light blue */
+      --text: #2b2b2b;
+      --muted: #6b6b6b;
+      --success: #4caf50;
+      --danger: #e53935;
+      --glass: rgba(255,255,255,0.6);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background: linear-gradient(135deg,var(--bg), #fff3d6 60%);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+    }
+    .shell{
+      width:100%;
+      max-width:980px;
+      box-shadow:0 10px 30px rgba(20,20,20,0.08);
+      border-radius:16px;
+      background:linear-gradient(180deg,var(--card), rgba(255,255,255,0.9));
+      padding:28px;
+      position:relative;
+      overflow:hidden;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+    .logo{
+      width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent1),var(--accent3));
+      display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:20px;box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+    h1{margin:0;font-size:20px}
+    p.lead{margin:6px 0 18px;color:var(--muted)}
+
+    .question-list{display:grid;gap:12px}
+    .card{
+      background:var(--glass);
+      border-radius:12px;padding:14px;border:1px solid rgba(0,0,0,0.04);
+    }
+    .q-title{font-weight:600;margin-bottom:8px}
+    .options{display:flex;flex-direction:column;gap:8px}
+    .option{
+      display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;user-select:none;border:1px solid transparent;
+      transition:all .12s ease;
+    }
+    .option input{display:none}
+    .option:hover{transform:translateY(-2px);box-shadow:0 6px 12px rgba(0,0,0,0.06)}
+    .option .dot{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+    .opt-a{background:linear-gradient(90deg,var(--accent2),#fff)}
+    .opt-b{background:linear-gradient(90deg,var(--accent3),#fff)}
+    .opt-c{background:linear-gradient(90deg,#ffd1dc,#fff)}
+    .opt-d{background:linear-gradient(90deg,#d4ffd9,#fff)}
+
+    footer{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:12px}
+    .btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600}
+    .btn-primary{background:linear-gradient(90deg,var(--accent1),#ffde7d);box-shadow:0 8px 18px rgba(255,184,107,0.18)}
+    .btn-ghost{background:transparent;border:1px solid rgba(0,0,0,0.06)}
+
+    .result{padding:16px;border-radius:12px;background:linear-gradient(180deg,#fff,#fff8e8);display:none;align-items:center;gap:12px}
+    .score{font-weight:800;font-size:20px}
+
+    .small{font-size:13px;color:var(--muted)}
+
+    /* responsive */
+    @media (max-width:640px){.shell{padding:18px}}
+
+  </style>
+</head>
+<body>
+  <div class="shell" id="app">
+    <header>
+      <div class="logo">ZC</div>
+      <div>
+        <h1>Zama Creator Program — Quiz Challenge Day 4</h1>
+        <p class="lead">Yellow theme — colourful and playful. 10 MCQs about TFHE‑rs. Select the best answer and submit.</p>
+      </div>
+    </header>
+
+    <main style="margin-top:14px">
+      <form id="quizForm">
+        <div class="question-list" id="questions"></div>
+        <footer>
+          <div class="small">Progress: <span id="progress">0 / 10</span></div>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn btn-ghost" id="resetBtn">Reset</button>
+            <button type="submit" class="btn btn-primary">Submit Answers</button>
+          </div>
+        </footer>
+      </form>
+
+      <div class="result" id="result">
+        <div>
+          <div class="score" id="score">0 / 10</div>
+          <div class="small" id="percent">0% — Keep going!</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <button class="btn btn-ghost" id="reviewBtn">Review Answers</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Questions taken from the provided TFHE-rs repo summary
+    const QUIZ = [
+      {
+        q: "What is TFHE-rs?",
+        opts: [
+          "A Python wrapper for homomorphic encryption",
+          "A C++ library for arithmetic over encrypted data",
+          "A pure Rust implementation of the TFHE scheme for Boolean and integer arithmetic over encrypted data",
+          "A hardware chip for encrypted computation"
+        ],
+        a: 2
+      },
+      {
+        q: "Which APIs does TFHE-rs provide?",
+        opts: ["Only a Rust API","Rust, C, and WASM (JavaScript) APIs","Only C and C++ APIs","Only a Python API"],
+        a: 1
+      },
+      {
+        q: "What integer bit size is explicitly supported (in \"short integer API\") in TFHE-rs according to the README?",
+        opts: ["16 bits","32 bits","8 bits","64 bits"],
+        a: 2
+      },
+      {
+        q: "Which Rust version is required to compile TFHE-rs?",
+        opts: ["1.56 or newer","1.70 or newer","1.84 or newer","2.0 or newer"],
+        a: 2
+      },
+      {
+        q: "Which target architecture is not currently supported on Windows due to missing entropy source?",
+        opts: ["x86","ARM (ARMv7)","AArch64","MIPS"],
+        a: 2
+      },
+      {
+        q: "What is the default failure probability guarantee (in terms of security) in TFHE-rs’s high-level API parameter sets?",
+        opts: ["≤ 2⁻⁶⁴","≤ 2⁻¹²⁸","≤ 2⁻²⁵⁶","≤ 2⁻³²"],
+        a: 1
+      },
+      {
+        q: "Under what license is TFHE-rs distributed?",
+        opts: ["MIT","Apache 2.0","GPLv3","BSD-3-Clause-Clear"],
+        a: 3
+      },
+      {
+        q: "Which security model is by default targeted by TFHE-rs parameter sets?",
+        opts: ["IND-CCA","IND-CPA","IND-CPA^D","IND-CCA2"],
+        a: 2
+      },
+      {
+        q: "What must a user do to use Zama’s technology for commercial purposes?",
+        opts: ["Nothing—it's fully free for commercial use","Register on GitHub","Purchase Zama’s commercial patent license","Cite the library in any publication"],
+        a: 2
+      },
+      {
+        q: "How do you run a TFHE-rs example to get best performance, as recommended?",
+        opts: ["cargo run in debug mode","cargo run --release","Compile manually with gcc","Run within an interpreter"],
+        a: 1
+      }
+    ];
+
+    const questionsEl = document.getElementById('questions');
+    const progressEl = document.getElementById('progress');
+    const resultEl = document.getElementById('result');
+    const scoreEl = document.getElementById('score');
+    const percentEl = document.getElementById('percent');
+
+    function render() {
+      questionsEl.innerHTML = '';
+      QUIZ.forEach((item, idx)=>{
+        const card = document.createElement('div'); card.className='card';
+        const title = document.createElement('div'); title.className='q-title'; title.textContent = (idx+1)+'. '+item.q;
+        card.appendChild(title);
+        const opts = document.createElement('div'); opts.className='options';
+        item.opts.forEach((opt, oi)=>{
+          const label = document.createElement('label'); label.className='option opt-'+['a','b','c','d'][oi];
+          label.dataset.q = idx; label.dataset.opt = oi;
+          const dot = document.createElement('div'); dot.className='dot'; dot.textContent = String.fromCharCode(65+oi);
+          const span = document.createElement('div'); span.textContent = opt;
+          label.appendChild(dot); label.appendChild(span);
+          label.addEventListener('click', ()=>{
+            // deselect siblings
+            const siblings = label.parentNode.querySelectorAll('.option');
+            siblings.forEach(s=>s.classList.remove('selected'));
+            label.classList.add('selected');
+            updateProgress();
+          });
+          opts.appendChild(label);
+        });
+        card.appendChild(opts);
+        questionsEl.appendChild(card);
+      });
+      updateProgress();
+    }
+
+    function updateProgress(){
+      const selected = document.querySelectorAll('.option.selected');
+      progressEl.textContent = selected.length + ' / ' + QUIZ.length;
+    }
+
+    document.getElementById('quizForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      // compute score
+      let score = 0;
+      const answers = [];
+      QUIZ.forEach((q, qi)=>{
+        const sel = document.querySelector('.option.selected[data-q="'+qi+'"]');
+        const chosen = sel ? Number(sel.dataset.opt) : null;
+        answers.push(chosen);
+        if (chosen === q.a) score++;
+      });
+      // show result
+      scoreEl.textContent = score + ' / ' + QUIZ.length;
+      const pct = Math.round((score / QUIZ.length)*100);
+      percentEl.textContent = pct + '%';
+      resultEl.style.display = 'flex';
+
+      // visually mark answers
+      document.querySelectorAll('.option').forEach(opt=>{
+        opt.classList.remove('correct','wrong');
+        const qIdx = Number(opt.dataset.q); const oIdx = Number(opt.dataset.opt);
+        if (oIdx === QUIZ[qIdx].a){
+          opt.style.outline = '2px solid rgba(76,175,80,0.14)';
+        } else {
+          opt.style.opacity = '0.92';
+        }
+        // mark wrong selections
+        if (opt.classList.contains('selected')){
+          if (oIdx === QUIZ[qIdx].a){
+            opt.style.boxShadow = '0 8px 20px rgba(76,175,80,0.12)';
+          } else {
+            opt.style.boxShadow = '0 8px 20px rgba(229,57,53,0.12)';
+            opt.style.opacity = '0.85';
+          }
+        }
+      });
+
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      document.querySelectorAll('.option.selected').forEach(s=>s.classList.remove('selected'));
+      document.querySelectorAll('.option').forEach(o=>{ o.style.boxShadow=''; o.style.opacity=''; o.style.outline=''; });
+      resultEl.style.display='none';
+      updateProgress();
+    });
+
+    document.getElementById('reviewBtn').addEventListener('click', ()=>{
+      // scroll to first wrong
+      for (let i=0;i<QUIZ.length;i++){
+        const sel = document.querySelector('.option.selected[data-q="'+i+'"]');
+        if (!sel || Number(sel.dataset.opt) !== QUIZ[i].a){
+          const card = document.querySelector('.option[data-q="'+i+'"]');
+          // find card element and scroll
+          const node = document.querySelector('.option[data-q="'+i+'"]');
+          if (node) node.scrollIntoView({behavior:'smooth',block:'center'});
+          break;
+        }
+      }
+    });
+
+    // initial render
+    render();
+  </script>
+</body>
+</html>
